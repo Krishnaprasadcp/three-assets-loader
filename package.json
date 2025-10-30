@@ -1,0 +1,38 @@
+{
+  "name": "three-assets-loader",
+  "version": "1.0.0",
+  "description": "Its a helper tool for loading all assets and you can use it anywhere.",
+  "license": "MIT",
+  "author": "Krishnaprasad CP",
+  "type": "module" ,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
+  "bin": {
+    "create-three-loader": "./dist/cli.js"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc",
+    "test": "node dist/index.js",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "threejs",
+    "assets-loader",
+    "three",
+    "cli",
+    "setup"
+  ],
+  "dependencies": {
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.1",
+    "@types/three": "^0.180.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9"
+  }
+}
