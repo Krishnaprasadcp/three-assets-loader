@@ -125,6 +125,24 @@ function animate() {
   requestAnimationFrame(animate);
 }
 animate();
+////////////////////////////////////////////////////
+//Play audio
+const allAssets = assetsLoader.allAssets;
+const audio = allAssets.audios.audioName;
+audio.play();
+//If its Positional
+*You need to pass the camera to it 
+assetsLoader.setCameraForPositionalAudio(camera);
+audio.setRefDistance(0.5);    // full volume within 5 units
+audio.setMaxDistance(1);  // silent after 100 units
+// audio.setRolloffFactor(2);  // steeper falloff
+// audio.setDistanceModel("inverse");
+Then you can attach to the mesh you want
+
+/************************************************/
+//For adding cubeMaps
+const skybox = assetsLoader.allAssets.cubeTextures["skybox1"];
+scene.background = skybox;
 
 /*************************************************/
 
