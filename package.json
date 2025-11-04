@@ -4,11 +4,12 @@
   "description": "Its a helper tool for loading all assets and you can use it anywhere.",
   "license": "MIT",
   "author": "Krishnaprasad CP",
-  "type": "module" ,
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist/**/*"
+    "dist/**/*",
+    "!dist/**/*.map"
   ],
   "bin": {
     "create-three-loader": "./dist/cli.js"
@@ -21,7 +22,7 @@
   },
   "keywords": [
     "threejs",
-    "assets-loader",
+    "three-assets-loader",
     "three",
     "cli",
     "setup"
