@@ -1,6 +1,6 @@
 import { GLTFLoader } from "three/examples/jsm/Addons.js";
 import LoadingManager from "./LoadingManager.js";
-import { AnimationAction, AnimationClip, AnimationMixer, Audio, AudioListener, AudioLoader, CubeTexture, CubeTextureLoader, Material, Mesh, Object3D, PositionalAudio, Scene, Texture, TextureLoader, } from "three";
+import { AnimationAction, AnimationClip, AnimationMixer, Audio, AudioListener, AudioLoader, Camera, CubeTexture, CubeTextureLoader, Material, Mesh, Object3D, PositionalAudio, Scene, Texture, TextureLoader, } from "three";
 export default class AssetsLoader {
     static instance;
     disposed = false;
@@ -138,6 +138,21 @@ export default class AssetsLoader {
             });
         });
         await Promise.all(loadPromises);
+    }
+    setCameraForPositionalAudio(camera) {
+        if (!this.audioListener) {
+            this.audioListener = new AudioListener();
+        }
+        if (this.audioListener.parent) {
+            this.audioListener.parent.remove(this.audioListener);
+        }
+        camera.add(this.audioListener);
+        Object.values(this.allAssets.audios).forEach((audio) => {
+            if (audio instanceof PositionalAudio) {
+                // @ts-ignore - private property
+                audio.listener = this.audioListener;
+            }
+        });
     }
     disposeModel(modelName) {
         const model = this.allAssets.models.gltf[modelName];

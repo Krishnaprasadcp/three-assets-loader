@@ -8,6 +8,7 @@ import {
   Audio,
   AudioListener,
   AudioLoader,
+  Camera,
   CubeTexture,
   CubeTextureLoader,
   Material,
@@ -205,6 +206,22 @@ export default class AssetsLoader {
     );
 
     await Promise.all(loadPromises);
+  }
+  public setCameraForPositionalAudio(camera: Camera) {
+    if (!this.audioListener) {
+      this.audioListener = new AudioListener();
+    }
+    if (this.audioListener.parent) {
+      this.audioListener.parent.remove(this.audioListener);
+    }
+    camera.add(this.audioListener);
+
+    Object.values(this.allAssets.audios).forEach((audio) => {
+      if (audio instanceof PositionalAudio) {
+        // @ts-ignore - private property
+        audio.listener = this.audioListener;
+      }
+    });
   }
   public disposeModel(modelName: string) {
     const model = this.allAssets.models.gltf[modelName];

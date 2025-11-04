@@ -1,7 +1,7 @@
 import type { AssetsEntryType } from "./assetsEntryType.js";
 import { GLTFLoader } from "three/examples/jsm/Addons.js";
 import LoadingManager from "./LoadingManager.js";
-import { Audio, AudioListener, AudioLoader, CubeTexture, CubeTextureLoader, PositionalAudio, Scene, Texture, TextureLoader } from "three";
+import { Audio, AudioListener, AudioLoader, Camera, CubeTexture, CubeTextureLoader, PositionalAudio, Scene, Texture, TextureLoader } from "three";
 export type AllAssetsType = {
     models: {
         gltf: Record<string, any>;
@@ -31,6 +31,7 @@ export default class AssetsLoader {
     private loadAllAudios;
     private loadAnimations;
     private loadCubeTextures;
+    setCameraForPositionalAudio(camera: Camera): void;
     disposeModel(modelName: string): void;
     disposeTexture(textureName: string): void;
     disposeAudio(audioName: string): void;
