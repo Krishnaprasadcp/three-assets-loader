@@ -1,4 +1,6 @@
 src
 node_modules
 tsconfig.json
- 
+dist/**/*.map
+.git
+.gitignore
