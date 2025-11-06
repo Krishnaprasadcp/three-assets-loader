@@ -27,7 +27,7 @@
     "cli",
     "setup"
   ],
-  "dependencies": {
+  "peerDependencies": {
     "three": "^0.180.0"
   },
   "devDependencies": {
