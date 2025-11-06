@@ -28,7 +28,7 @@
     "setup"
   ],
   "peerDependencies": {
-    "three": "^0.180.0"
+    "three": ">=0.160.0 <0.190.0"
   },
   "devDependencies": {
     "@types/node": "^24.9.1",
