@@ -131,7 +131,7 @@ const allAssets = assetsLoader.allAssets;
 const audio = allAssets.audios.audioName;
 audio.play();
 //If its Positional
-*You need to pass the camera to it 
+*You need to pass the camera to it
 assetsLoader.setCameraForPositionalAudio(camera);
 audio.setRefDistance(0.5);    // full volume within 5 units
 audio.setMaxDistance(1);  // silent after 100 units
@@ -146,16 +146,86 @@ scene.background = skybox;
 
 /*************************************************/
 
+//For adding hdrCubeTextures
+
+If you want to add PMREMGenerator then you must pass the renderer before you load allAssets
+*Like this
+const assetsLoader = AssetsLoader.getInstance(assetsEntry, scene);
+//this function must be called
+assetsLoader.setRendererForHdrMap(renderer);
+await assetsLoader.loadAllAssets();
+
+//Then you can directly add it to the scene background and environment
+scene.background = assetsLoader.allAssets.hdrCubeTextures["skybox2"];
+scene.environment = assetsLoader.allAssets.hdrCubeTextures["skybox2"];
+
+/***********************************************/
+//For adding hdrTextures
+If you want to add PMREMGenerator then you must pass the renderer before you load allAssets
+*Like this
+const assetsLoader = AssetsLoader.getInstance(assetsEntry, scene);
+//this function must be called
+assetsLoader.setRendererForHdrMap(renderer);
+await assetsLoader.loadAllAssets();
+
+//Then you can directly add it to the scene background and environment
+scene.background = assetsLoader.allAssets.hdrTextures["skybox2"];
+scene.environment = assetsLoader.allAssets.hdrTextures["skybox2"];
+
+/*********************************************/
+//For adding fonts
+const material = new THREE.MeshStandardMaterial({ color: 0x0077ff });
+
+const textGeo = new TextGeometry("text", {
+  font: assetsLoader.allAssets.fonts["roboto"],
+
+  size: 70,
+});
+
+const textMesh1 = new THREE.Mesh(textGeo, material);
+scene.add(textMesh1);
+
+
 Disposal & Memory Management
 Prevent memory leaks with full cleanup:
 
-// Dispose a single model
-assetsLoader.disposeModel("character");
+
+//For disposing textures.
+const assetsLoader =  AssetsLoader.getInstance();
+assetsLoader.disposeTexture("textureName")
+***The textureName should be match with the exact name that you have provided in assetsEntry
+
+//For disposing model
+const assetsLoader =  AssetsLoader.getInstance();
+assetsLoader.disposeModel("modelName")
+***The modelName should be match with the exact name that you have provided in assetsEntry
+*Note
+if you dispose anymodel this will dispose its animation and its mixer .
+
+//For removing Audio
+const assetsLoader =  AssetsLoader.getInstance();
+assetsLoader.disposeAudio("audioName")
+***The audioName should be match with the exact name that you have provided in assetsEntry
+
+//For removing cubeTextures
+const assetsLoader =  AssetsLoader.getInstance();
+assetsLoader.disposeCubeTexture("cubeTextureName")
+***The cubeTextureName should be match with the exact name that you have provided in assetsEntry
+
+//For removing hdrCubeTextures
+assetsLoader.disposeHdrCubeTexture("hdrCubeTextureName");
+
+//For removing hdriTexture
+assetsLoader.disposeHdrTexture("hdriName")
+
+//For removing fonts
+assetsLoader.disposeFont("fontName")
+
 
 // Dispose everything (ideal on scene change)
-await assetsLoader.disposeAll(); 
- 
-this will automatically 
+  assetsLoader.disposeEverything();
+
+this will automatically
 * Removes from scene
 * Stops animations
 * Disposes geometries, materials, textures
@@ -197,3 +267,4 @@ Built With
 Three.js
 TypeScript
 ES Modules
+```

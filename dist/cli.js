@@ -28,6 +28,20 @@ export type AssetsEntryType = {
     name: string;
     paths: [string, string, string, string, string, string];
   }>;
+    hdrCubeTextures?: Array<{
+      name: string;
+      paths: [string, string, string, string, string, string];
+      isPMREMGenerator: boolean;
+    }>;
+    hdrTextures?: Array<{
+      name: string;
+      path: string;
+      mapping?: keyof typeof mappingTypes;
+    }>;
+    fonts?: Array<{
+      name: string;
+      path: string;
+    }>;
 };
 
 export const assetsEntry: AssetsEntryType = {
@@ -66,7 +80,34 @@ export const assetsEntry: AssetsEntryType = {
         "./nz.jpg"
       ]
     }
-  ]
+  ],
+    hdrCubeTextures: [
+    {
+      name: "skybox2",
+      paths: [
+        "/Yokohama2/negx.hdr",
+        "/Yokohama2/negy.hdr",
+        "/Yokohama2/negz.hdr",
+        "/Yokohama2/posx.hdr",
+        "/Yokohama2/posy.hdr",
+        "/Yokohama2/posz.hdr",
+      ],
+      isPMREMGenerator: true,
+    },
+  ],
+  hdrTextures: [
+    {
+      name: "hdr1",
+      path: "/hdri1.hdr",
+      mapping: "EquirectangularReflectionMapping",
+    },
+  ],
+  fonts: [
+    {
+      name: "roboto",
+      path: "/gentilis_regular.typeface.json",
+    },
+  ],
 };
 `;
 const exampleSceneTemplate = `
@@ -118,6 +159,16 @@ assetsLoader.disposeAudio("audioName")
 const assetsLoader =  AssetsLoader.getInstance();
 assetsLoader.disposeCubeTexture("cubeTextureName")
 ***The cubeTextureName should be match with the exact name that you have provided in assetsEntry
+
+//For removing hdrCubeTextures
+assetsLoader.disposeHdrCubeTexture("hdrCubeTextureName");
+
+//For removing hdriTexture
+assetsLoader.disposeHdrTexture("hdriName")
+
+//For removing fonts
+assetsLoader.disposeFont("fontName")
+
 
 //For remove Everything
 setTimeout(() => {
