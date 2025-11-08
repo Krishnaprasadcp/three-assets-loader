@@ -307,8 +307,11 @@ export default class AssetsLoader {
     await Promise.all(loadPromises);
   }
   private async loadHdrCubeTextures(): Promise<void> {
-    if (!this.assetsEntry.hdrCubeTextures) return;
-
+    if (
+      !this.assetsEntry.hdrCubeTextures ||
+      this.assetsEntry.hdrCubeTextures.length === 0
+    )
+      return;
     if (!this.renderer) {
       console.warn(
         "Renderer not set. Call setRendererForHdrCubeMap(renderer) first."
