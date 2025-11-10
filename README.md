@@ -82,7 +82,34 @@ export const assetsEntry = {
         "./sky/nz.jpg"
       ]
     }
-  ]
+  ],
+   hdrCubeTextures: [
+    {
+      name: "skybox2",
+      paths: [
+        "/Yokohama2/negx.hdr",
+        "/Yokohama2/negy.hdr",
+        "/Yokohama2/negz.hdr",
+        "/Yokohama2/posx.hdr",
+        "/Yokohama2/posy.hdr",
+        "/Yokohama2/posz.hdr",
+      ],
+      isPMREMGenerator: true,
+    },
+  ],
+  hdrTextures: [
+    {
+      name: "hdr1",
+      path: "/hdri1.hdr",
+      mapping: "EquirectangularReflectionMapping",
+    },
+  ],
+  fonts: [
+    {
+      name: "roboto",
+      path: "/gentilis_regular.typeface.json",
+    },
+  ],
 };
 
 /*************************************************/
