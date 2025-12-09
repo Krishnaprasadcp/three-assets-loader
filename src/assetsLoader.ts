@@ -1,26 +1,17 @@
 import type { AssetsEntryType } from "./assetsEntryType.js";
-import { GLTFLoader } from "three/examples/jsm/Addons.js";
+import { GLTFLoader, type GLTF } from "three/examples/jsm/Addons.js";
 import LoadingManager from "./LoadingManager.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { FontLoader, Font } from "three/addons/loaders/FontLoader.js";
 import { HDRCubeTextureLoader } from "three/addons/loaders/HDRCubeTextureLoader.js";
 import { HDRLoader } from "three/addons/loaders/HDRLoader.js";
 import {
-  AnimationAction,
-  AnimationClip,
-  AnimationMixer,
   Audio,
   AudioListener,
   AudioLoader,
-  Camera,
-  CubeTexture,
   CubeTextureLoader,
-  Material,
-  Mesh,
-  Object3D,
   PositionalAudio,
   Scene,
-  Texture,
   TextureLoader,
   PMREMGenerator,
   WebGLRenderer,
@@ -29,45 +20,53 @@ import {
   CubeReflectionMapping,
   CubeRefractionMapping,
 } from "three";
+import {
+  AssetsTracker,
+  generateUniqueId,
+  CloneModels,
+  CloneTexture,
+} from "./helperModules.js";
+import type { SourceTextureData } from "./allTypes.js";
+declare module "three/addons/loaders/FontLoader.js" {
+  interface Font {
+    userData: {
+      keepIt?: boolean;
+      keepItUntil?: string;
+    };
+  }
+}
+export type CloneType = "deep" | "shallow" | "skeleton";
 
-export type AllAssetsType = {
-  models: {
-    gltf: Record<string, any>;
-    animations: Record<string, any>;
-  };
-  audios: Record<string, Audio | PositionalAudio>;
-  textures: Record<string, Texture>;
-  cubeTextures: Record<string, CubeTexture>;
-  fonts: Record<string, Font>;
-  hdrCubeTextures: Record<string, Texture>;
-  hdrTextures: Record<string, Texture>;
-};
 export const mappingTypes = {
   EquirectangularReflectionMapping,
   EquirectangularRefractionMapping,
   CubeReflectionMapping,
   CubeRefractionMapping,
 } as const;
+
 export default class AssetsLoader {
-  private static instance: AssetsLoader;
-  private disposed = false;
-  public loadingManager: LoadingManager;
-  public assetsEntry: AssetsEntryType;
-  public modelLoader: GLTFLoader;
-  public textureLoader: TextureLoader;
-  public audioLoader: AudioLoader;
-  public audioListener: AudioListener | null;
-  public cubeTextureLoader: CubeTextureLoader;
-  public hdrCubeTextureLoader: HDRCubeTextureLoader;
-  public dracoLoader: DRACOLoader;
+  private assetsTracker: AssetsTracker;
+  private loadingManager: LoadingManager;
+  private assetsEntry: AssetsEntryType;
+  private modelLoader: GLTFLoader;
+  private textureLoader: TextureLoader;
+  private audioLoader: AudioLoader;
+  private audioListener: AudioListener | null;
+  private cubeTextureLoader: CubeTextureLoader;
+  private hdrCubeTextureLoader: HDRCubeTextureLoader;
+  private dracoLoader: DRACOLoader;
   private dracoModelLoader: GLTFLoader;
-  public fontLoader: FontLoader;
+  private fontLoader: FontLoader;
   public scene: Scene;
   private renderer?: WebGLRenderer | undefined;
   constructor(assetsEntry: AssetsEntryType, scene: Scene) {
+    if (!assetsEntry || !scene) {
+      throw new Error("AssetsEntry and Scene must be provided.");
+    }
     this.loadingManager = LoadingManager.getInstance();
     this.assetsEntry = assetsEntry;
     this.scene = scene;
+    this.assetsTracker = AssetsTracker.getInstance();
     this.textureLoader = new TextureLoader(this.loadingManager.getManager());
     this.audioLoader = new AudioLoader(this.loadingManager.getManager());
     this.audioListener = new AudioListener();
@@ -88,30 +87,7 @@ export default class AssetsLoader {
     this.dracoModelLoader.setDRACOLoader(this.dracoLoader);
     this.fontLoader = new FontLoader(this.loadingManager.getManager());
   }
-  public static getInstance(assetsEntry?: AssetsEntryType, scene?: Scene) {
-    if (!AssetsLoader.instance) {
-      if (!assetsEntry || !scene) {
-        throw new Error(
-          "AssetsEntry and Scene must be provided the first time!"
-        );
-      }
-      AssetsLoader.instance = new AssetsLoader(assetsEntry, scene);
-    }
-    return AssetsLoader.instance;
-  }
 
-  public allAssets: AllAssetsType = {
-    models: {
-      gltf: {},
-      animations: {},
-    },
-    audios: {},
-    textures: {},
-    cubeTextures: {},
-    hdrCubeTextures: {},
-    hdrTextures: {},
-    fonts: {},
-  };
   public async loadAllAssets(): Promise<void> {
     const loadModelsPromises = this.loadModels();
     const loadTexturesPromises = this.loadTextures();
@@ -129,12 +105,13 @@ export default class AssetsLoader {
       loadHdrTexturesPromises,
       loadFontsPromises,
     ]);
+    this.renderer = undefined;
   }
   private async loadModels(): Promise<void> {
     if (!this.assetsEntry.models) return;
-
+    const assetsTracker = AssetsTracker.getInstance();
     const loadPromises = this.assetsEntry.models.map(
-      ({ name, path, scale, position, isDraco }) => {
+      ({ name, path, isDraco, cloneRequest }) => {
         // Only use Draco loader if isDraco is true AND path ends with .drc
         const useDracoLoader = isDraco && path.toLowerCase().endsWith(".drc");
         const loader = useDracoLoader
@@ -144,23 +121,23 @@ export default class AssetsLoader {
         return new Promise<void>((resolve) => {
           loader.load(
             path,
-            (gltf) => {
+            (gltf: GLTF) => {
               try {
-                const { x: sx = 1, y: sy = 1, z: sz = 1 } = scale || {};
-                gltf.scene.scale.set(sx, sy, sz);
+                const animations = gltf.animations;
+                const id = generateUniqueId();
+                const sourceModel = gltf.scene;
+                sourceModel.name = name;
 
-                const { x: px = 0, y: py = 0, z: pz = 0 } = position || {};
-                gltf.scene.position.set(px, py, pz);
+                assetsTracker.setModelSource({
+                  animations,
+                  id,
+                  sourceModel,
+                  name,
+                });
+                if (cloneRequest?.enabled) {
 
-                if (gltf.animations && gltf.animations.length > 0) {
-                  const { mixer, actions } = this.loadAnimations(
-                    gltf.animations,
-                    this.scene
-                  );
-                  this.allAssets.models.animations[name] = { mixer, actions };
+                  CloneModels(cloneRequest, id);
                 }
-
-                this.allAssets.models.gltf[name] = gltf.scene;
               } catch (error) {
                 console.error(`Error processing model: ${name}`, error);
               }
@@ -182,23 +159,34 @@ export default class AssetsLoader {
   private async loadTextures(): Promise<void> {
     if (!this.assetsEntry.textures) return;
 
-    const loadPromises = this.assetsEntry.textures.map(({ name, path }) => {
-      return new Promise<void>((resolve) => {
-        this.textureLoader.load(
-          path,
-          (texture) => {
-            this.allAssets.textures[name] = texture;
-            console.log(`Loaded texture: ${name}`);
-            resolve();
-          },
-          undefined,
-          (error) => {
-            console.error(`Failed to load texture: ${name}`, error);
-            resolve(); // resolve anyway
-          }
-        );
-      });
-    });
+    const loadPromises = this.assetsEntry.textures.map(
+      ({ name, path, cloneRequest }) => {
+        return new Promise<void>((resolve) => {
+          this.textureLoader.load(
+            path,
+            (texture) => {
+              const id = generateUniqueId();
+              texture.name = name;
+              this.assetsTracker.setSourceTexture({
+                texture,
+                id,
+                name,
+              } as SourceTextureData);
+              if (cloneRequest.enabled) {
+                CloneTexture(cloneRequest, id);
+              }
+              console.log(`Loaded texture: ${name}`);
+              resolve();
+            },
+            undefined,
+            (error) => {
+              console.error(`Failed to load texture: ${name}`, error);
+              resolve(); // resolve anyway
+            }
+          );
+        });
+      }
+    );
 
     await Promise.all(loadPromises);
   }
@@ -213,13 +201,20 @@ export default class AssetsLoader {
             path,
             (buffer) => {
               try {
-                const sound = positional
-                  ? new PositionalAudio(this.audioListener!)
-                  : new Audio(this.audioListener!);
+                const id = generateUniqueId();
+                let sound: Audio<AudioNode>;
+                if (positional) {
+                  sound = new PositionalAudio(this.audioListener!);
+                  this.assetsTracker.setAudio({ audio: sound, id, name });
+                } else {
+                  sound = new Audio(this.audioListener!);
+                  this.assetsTracker.setAudio({ audio: sound, id, name });
+                }
+
                 sound.setBuffer(buffer);
                 sound.setLoop(!!loop);
                 sound.setVolume(volume ?? 1);
-                this.allAssets.audios[name] = sound;
+
                 console.log(`Loaded audio: ${name}`);
               } catch (err) {
                 console.error(`Error processing audio: ${name}`, err);
@@ -239,15 +234,6 @@ export default class AssetsLoader {
     await Promise.all(loadPromises);
   }
 
-  private loadAnimations(animations: AnimationClip[], scene: Scene) {
-    const mixer = new AnimationMixer(scene);
-    const actions: Record<string, AnimationAction> = {};
-    animations.forEach((clip) => {
-      actions[clip.name] = mixer.clipAction(clip);
-    });
-
-    return { mixer, actions };
-  }
   private async loadCubeTextures(): Promise<void> {
     if (!this.assetsEntry.cubeTextures) return;
 
@@ -257,7 +243,12 @@ export default class AssetsLoader {
           this.cubeTextureLoader.load(
             paths,
             (cubeTexture) => {
-              this.allAssets.cubeTextures[name] = cubeTexture;
+              const id = generateUniqueId();
+              this.assetsTracker.setCubeMap({
+                cubeMap: cubeTexture,
+                id,
+                name,
+              });
               resolve();
             },
             undefined,
@@ -273,30 +264,14 @@ export default class AssetsLoader {
     await Promise.all(loadPromises);
   }
 
-  public setCameraForPositionalAudio(camera: Camera) {
-    if (!this.audioListener) {
-      this.audioListener = new AudioListener();
-    }
-    if (this.audioListener.parent) {
-      this.audioListener.parent.remove(this.audioListener);
-    }
-    camera.add(this.audioListener);
-
-    Object.values(this.allAssets.audios).forEach((audio) => {
-      if (audio instanceof PositionalAudio) {
-        // @ts-ignore - private property
-        audio.listener = this.audioListener;
-      }
-    });
-  }
-
   private async loadFonts() {
     if (!this.assetsEntry.fonts) return;
     const loadPromises = this.assetsEntry.fonts.map(({ name, path }) => {
       return new Promise<void>(async (resolve) => {
         try {
+          const id = generateUniqueId();
           const font = await this.fontLoader.loadAsync(path);
-          this.allAssets.fonts[name] = font;
+          this.assetsTracker.setFont({ font, name, id });
           resolve();
         } catch (error) {
           console.error(`Failed to load font: ${name}`, error);
@@ -314,7 +289,7 @@ export default class AssetsLoader {
       return;
     if (!this.renderer) {
       console.warn(
-        "Renderer not set. Call setRendererForHdrCubeMap(renderer) first."
+        "Renderer not set. Call setRendererForHdrMap(renderer)first."
       );
       return;
     }
@@ -328,11 +303,21 @@ export default class AssetsLoader {
           this.hdrCubeTextureLoader.load(
             paths,
             (cubeTexture) => {
+              const id = generateUniqueId();
               if (isPMREMGenerator) {
                 const envMap = pmremGenerator.fromCubemap(cubeTexture).texture;
-                this.allAssets.hdrCubeTextures[name] = envMap;
+                cubeTexture.dispose();
+                this.assetsTracker.setHdrCubeMap({
+                  cubeMap: envMap,
+                  id,
+                  name,
+                });
               } else {
-                this.allAssets.hdrCubeTextures[name] = cubeTexture;
+                this.assetsTracker.setHdrCubeMap({
+                  cubeMap: cubeTexture,
+                  id,
+                  name,
+                });
               }
 
               console.log(`Loaded HDR cube texture: ${name}`);
@@ -351,11 +336,10 @@ export default class AssetsLoader {
     await Promise.all(loadPromises);
 
     pmremGenerator.dispose();
-
-    // Clear the temporary renderer reference
-    this.renderer = undefined;
   }
   private async loadHdrTextures(): Promise<void> {
+    console.log(this.renderer);
+
     if (!this.assetsEntry.hdrTextures || !this.renderer) return;
 
     const pmremGenerator = new PMREMGenerator(this.renderer);
@@ -367,6 +351,7 @@ export default class AssetsLoader {
           new HDRLoader(this.loadingManager.getManager()).load(
             path,
             (texture) => {
+              const id = generateUniqueId();
               // Only apply mapping if provided
               if (mapping && mappingTypes[mapping]) {
                 texture.mapping = mappingTypes[mapping];
@@ -374,12 +359,25 @@ export default class AssetsLoader {
 
               // If mapping is reflection and equirectangular → convert to envmap
               if (texture.mapping === EquirectangularReflectionMapping) {
-                const envMap =
-                  pmremGenerator.fromEquirectangular(texture).texture;
-                this.allAssets.hdrTextures[name] = envMap;
-                texture.dispose();
+                const rt = pmremGenerator.fromEquirectangular(texture);
+                const envMap = rt.texture;
+
+                // 👉 Don't dispose original texture — we need it for skybox
+                this.assetsTracker.setHdriTexture({
+                  hdri: envMap, // reflection map
+                  original: texture, // raw HDR for background
+                  id,
+                  name,
+                });
+
+                rt.dispose();
               } else {
-                this.allAssets.hdrTextures[name] = texture;
+                this.assetsTracker.setHdriTexture({
+                  hdri: texture,
+                  original: texture,
+                  id,
+                  name,
+                });
               }
 
               console.log(
@@ -397,241 +395,8 @@ export default class AssetsLoader {
     );
     await Promise.all(loadPromises);
     pmremGenerator.dispose();
-    this.renderer = undefined;
   }
   public setRendererForHdrMap(renderer: WebGLRenderer) {
     this.renderer = renderer;
-  }
-  public disposeModel(modelName: string) {
-    const model = this.allAssets.models.gltf[modelName];
-    const animation = this.allAssets.models.animations[modelName];
-
-    if (!model) return;
-
-    // Remove model from scene
-    this.scene.remove(model);
-
-    // Stop all animations first
-    if (animation?.mixer) {
-      // Stop all actions
-      Object.values(
-        animation.actions as Record<string, AnimationAction>
-      ).forEach((action) => {
-        action.stop();
-        action.stop(); // Also stop the clip
-      });
-
-      // Uncache the root and all children
-      animation.mixer.uncacheRoot(model);
-      animation.mixer.stopAllAction();
-    }
-
-    // Dispose geometries, materials, and textures
-    model.traverse((obj: Object3D) => {
-      const mesh = obj as Mesh;
-
-      if (mesh.geometry) {
-        mesh.geometry.dispose();
-      }
-
-      if (mesh.material) {
-        const materials = Array.isArray(mesh.material)
-          ? mesh.material
-          : [mesh.material];
-
-        materials.forEach((mat: Material) => {
-          // Dispose textures safely
-          if (mat && mat.dispose) {
-            // Check for textures in materials
-            const textureKeys = [
-              "map",
-              "normalMap",
-              "specularMap",
-              "emissiveMap",
-              "lightMap",
-              "aoMap",
-              "displacementMap",
-              "roughnessMap",
-              "metalnessMap",
-              "alphaMap",
-              "envMap",
-            ];
-
-            textureKeys.forEach((key) => {
-              const value = (mat as any)[key];
-              if (value instanceof Texture) {
-                const isGlobal = Object.values(
-                  this.allAssets.textures
-                ).includes(value);
-                if (!isGlobal && value.dispose) {
-                  value.dispose();
-                }
-              }
-            });
-
-            mat.dispose();
-          }
-        });
-      }
-    });
-
-    // Clean up references
-    delete this.allAssets.models.gltf[modelName];
-    if (animation) {
-      // Dispose of the mixer itself
-      if (animation.mixer) {
-        animation.mixer.dispose();
-      }
-      delete this.allAssets.models.animations[modelName];
-    }
-
-    console.log(`Disposed model: ${modelName}`);
-  }
-  public disposeTexture(textureName: string) {
-    if (!textureName) return;
-
-    const texture = this.allAssets.textures[textureName];
-    if (!texture) {
-      console.warn(`No texture found: ${textureName}`);
-      return;
-    }
-
-    if (texture.isTexture && texture.dispose) {
-      // Ensure texture isn't being used by any materials
-      const isInUse = Object.values(this.scene.children).some((child) => {
-        if (child instanceof Mesh && child.material) {
-          const mat = Array.isArray(child.material)
-            ? child.material
-            : [child.material];
-          return mat.some((m) => {
-            const textureKeys = Object.keys(m).filter((k) => m[k] === texture);
-            return textureKeys.length > 0;
-          });
-        }
-        return false;
-      });
-
-      if (!isInUse) {
-        texture.dispose();
-      } else {
-        console.warn(`Texture ${textureName} is still in use by scene objects`);
-      }
-
-      delete this.allAssets.textures[textureName];
-      console.log(`Disposed texture: ${textureName}`);
-    } else {
-      console.warn(`Invalid texture object: ${textureName}`);
-    }
-  }
-  public disposeAudio(audioName: string) {
-    if (!audioName) return;
-    const audio = this.allAssets.audios[audioName];
-
-    if (!audio) {
-      console.warn(`No texture found: ${audioName}`);
-      return;
-    }
-    audio.stop();
-    audio.disconnect();
-    // if (this.audioListener) {
-    //   // Note: AudioListener disposal is handled by the camera it's attached to
-    //   // But we should still clear references
-    //   this.audioListener = null;
-    // }
-    delete this.allAssets.audios[audioName];
-  }
-  public disposeCubeTexture(name: string) {
-    const cube = this.allAssets.cubeTextures[name];
-    if (!cube) return;
-    cube.dispose();
-    delete this.allAssets.cubeTextures[name];
-  }
-  public disposeHdrCubeTexture(name: string) {
-    const cube = this.allAssets.hdrCubeTextures[name];
-    if (!cube) return;
-
-    cube.dispose(); // frees GPU memory
-    delete this.allAssets.hdrCubeTextures[name];
-    console.log(`Disposed HDR cube texture: ${name}`);
-  }
-  public disposeHdrTexture(name: string) {
-    const tex = this.allAssets.hdrTextures[name];
-    if (!tex) return;
-    this.scene.environment = null;
-    this.scene.background = null;
-    tex.dispose?.();
-
-    if ((tex as any).source?.data?.dispose) {
-      console.log(tex.source.data);
-
-      (tex as any).source.data.dispose();
-    }
-
-    delete this.allAssets.hdrTextures[name];
-    console.log(`Disposed HDR texture: ${name}`);
-  }
-
-  public disposeFont(name: string) {
-    delete this.allAssets.fonts[name];
-  }
-  public disposeEverything() {
-    this.assetsEntry.textures?.forEach(({ name }) => {
-      this.disposeTexture(name);
-    });
-    this.assetsEntry.models?.forEach(({ name }) => {
-      this.disposeModel(name);
-    });
-    this.assetsEntry.audios?.forEach(({ name }) => {
-      this.disposeAudio(name);
-    });
-    this.assetsEntry.cubeTextures?.forEach(({ name }) => {
-      this.disposeCubeTexture(name);
-    });
-    this.assetsEntry.hdrCubeTextures?.forEach(({ name }) => {
-      this.disposeHdrCubeTexture(name);
-    });
-    this.assetsEntry.hdrTextures?.forEach(({ name }) => {
-      this.disposeHdrTexture(name);
-    });
-
-    this.assetsEntry.fonts?.forEach(({ name }) => {
-      this.disposeFont(name);
-    });
-    this.loadingManager.dispose();
-  }
-
-  // In AssetsLoader class
-  public async disposeAll() {
-    console.log("Starting comprehensive asset disposal...");
-
-    // Stop all audio
-    Object.values(this.allAssets.audios).forEach((audio) => {
-      if (audio && audio.isPlaying) {
-        audio.stop();
-      }
-    });
-
-    // Dispose everything
-    this.disposeEverything();
-
-    // Clear all asset references
-    this.allAssets = {
-      models: { gltf: {}, animations: {} },
-      audios: {},
-      textures: {},
-      cubeTextures: {},
-      hdrCubeTextures: {},
-      hdrTextures: {},
-      fonts: {},
-    };
-
-    // Clear loaders if needed
-    this.modelLoader = null as any;
-    this.textureLoader = null as any;
-    this.audioLoader = null as any;
-    this.cubeTextureLoader = null as any;
-    this.hdrCubeTextureLoader = null as any;
-    this.fontLoader = null as any;
-    console.log("All assets disposed successfully");
   }
 }

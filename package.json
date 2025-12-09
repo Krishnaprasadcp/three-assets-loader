@@ -18,7 +18,8 @@
     "dev": "vite",
     "build": "tsc",
     "test": "node dist/index.js",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "build-link":"npm run build && npm link"
   },
   "keywords": [
     "threejs",

@@ -1,20 +1,43 @@
 import type { mappingTypes } from "./assetsLoader.js";
 
+export const CloneMethods = {
+  DeepClone: "DeepClone",
+  ShallowClone: "ShallowClone",
+  SkeletonClone: "SkeletonClone",
+} as const;
+interface BaseCloneRequest {
+  enabled?: boolean;
+  count: number;
+}
+
+// ---- Variants ----
+
+// For deep and shallow 
+export interface StandardCloneRequest extends BaseCloneRequest {
+  methods: "DeepClone" | "ShallowClone";
+}
+
+// For skeleton clone only 
+export interface SkeletonCloneRequest extends BaseCloneRequest {
+  methods: "SkeletonClone";
+  deepClone?: boolean;
+  cloneGeometry?: boolean;
+}
+
+// ---- Final union type ----
+export type CloneRequestTypeForModel =
+  | StandardCloneRequest
+  | SkeletonCloneRequest;
+export interface CloneRequestTypeForTexture {
+  enabled: boolean;
+  count: number;
+}
 export type AssetsEntryType = {
   models?: Array<{
     name: string;
     path: string;
-    scale?: {
-      x: number;
-      y: number;
-      z: number;
-    };
-    position?: {
-      x: number;
-      y: number;
-      z: number;
-    };
     isDraco?: boolean;
+    cloneRequest: CloneRequestTypeForModel;
   }>;
   audios?: Array<{
     name: string;
@@ -26,6 +49,7 @@ export type AssetsEntryType = {
   textures?: Array<{
     name: string;
     path: string;
+    cloneRequest: CloneRequestTypeForTexture;
   }>;
   cubeTextures?: Array<{
     name: string;

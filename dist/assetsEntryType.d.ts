@@ -1,19 +1,32 @@
 import type { mappingTypes } from "./assetsLoader.js";
+export declare const CloneMethods: {
+    readonly DeepClone: "DeepClone";
+    readonly ShallowClone: "ShallowClone";
+    readonly SkeletonClone: "SkeletonClone";
+};
+interface BaseCloneRequest {
+    enabled?: boolean;
+    count: number;
+}
+export interface StandardCloneRequest extends BaseCloneRequest {
+    methods: "DeepClone" | "ShallowClone";
+}
+export interface SkeletonCloneRequest extends BaseCloneRequest {
+    methods: "SkeletonClone";
+    deepClone?: boolean;
+    cloneGeometry?: boolean;
+}
+export type CloneRequestTypeForModel = StandardCloneRequest | SkeletonCloneRequest;
+export interface CloneRequestTypeForTexture {
+    enabled: boolean;
+    count: number;
+}
 export type AssetsEntryType = {
     models?: Array<{
         name: string;
         path: string;
-        scale?: {
-            x: number;
-            y: number;
-            z: number;
-        };
-        position?: {
-            x: number;
-            y: number;
-            z: number;
-        };
         isDraco?: boolean;
+        cloneRequest: CloneRequestTypeForModel;
     }>;
     audios?: Array<{
         name: string;
@@ -25,6 +38,7 @@ export type AssetsEntryType = {
     textures?: Array<{
         name: string;
         path: string;
+        cloneRequest: CloneRequestTypeForTexture;
     }>;
     cubeTextures?: Array<{
         name: string;
@@ -45,4 +59,5 @@ export type AssetsEntryType = {
         path: string;
     }>;
 };
+export {};
 //# sourceMappingURL=assetsEntryType.d.ts.map
