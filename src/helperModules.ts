@@ -794,7 +794,7 @@ export class AssetsTracker {
     this.assetsNameToKeyMap.delete(audioName);
     delete this.audioMap[audioName];
 
-    console.log(`🎧 Audio disposed: ${audioName}`);
+    console.log(` Audio disposed: ${audioName}`);
   }
 
   // -------------------------------------------------------
@@ -961,11 +961,11 @@ export class AssetsTracker {
       this.disposeFont(fontName);
     }
 
-    console.log("✅ disposeEvrything completed. All assets cleared.");
+    console.log(" disposeEvrything completed. All assets cleared.");
   }
 
   disposeModelsByScene(scene: Scene) {
-    console.log(`🧨 Disposing assets inside scene '${scene.name}'...`);
+    console.log(` Disposing assets inside scene '${scene.name}'...`);
 
     for (const modelName of Object.keys(this.modelsMap)) {
       const record = this.modelsMap[modelName];

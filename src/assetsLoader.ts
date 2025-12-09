@@ -338,7 +338,6 @@ export default class AssetsLoader {
     pmremGenerator.dispose();
   }
   private async loadHdrTextures(): Promise<void> {
-    console.log(this.renderer);
 
     if (!this.assetsEntry.hdrTextures || !this.renderer) return;
 
