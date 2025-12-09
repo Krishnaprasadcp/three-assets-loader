@@ -658,7 +658,7 @@ export class AssetsTracker {
         this.assetsKeyToNameMap.delete(audioItem.id);
         this.assetsNameToKeyMap.delete(audioName);
         delete this.audioMap[audioName];
-        console.log(`🎧 Audio disposed: ${audioName}`);
+        console.log(` Audio disposed: ${audioName}`);
     }
     // -------------------------------------------------------
     // FULLY FIXED disposeTexturesByScene()
@@ -797,10 +797,10 @@ export class AssetsTracker {
         for (const fontName of allFont) {
             this.disposeFont(fontName);
         }
-        console.log("✅ disposeEvrything completed. All assets cleared.");
+        console.log(" disposeEvrything completed. All assets cleared.");
     }
     disposeModelsByScene(scene) {
-        console.log(`🧨 Disposing assets inside scene '${scene.name}'...`);
+        console.log(` Disposing assets inside scene '${scene.name}'...`);
         for (const modelName of Object.keys(this.modelsMap)) {
             const record = this.modelsMap[modelName];
             if (!record)

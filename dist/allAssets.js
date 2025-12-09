@@ -39,13 +39,11 @@ export default class AllAssets {
     // isCloned?: boolean,
     cloneType, count) {
         const tracker = this.#assetsTracker;
-        // ---- Step 1: Convert ID → name ----
         let name = typeof nameOrId === "number"
             ? tracker["assetsKeyToNameMap"].get(nameOrId)
             : nameOrId;
         // Auto detect clone
         const isCloned = /(DeepClone|ShallowClone|SkeletonClone)\d+$/.test(name);
-        // ---- Step 2: If not cloned, return source ----
         if (!isCloned && !cloneType) {
             return tracker.getModel(name, false);
         }
@@ -65,8 +63,6 @@ export default class AllAssets {
                 throw new Error(`Clone '${name}' not found`);
             return clone;
         }
-        // ---- Step 4: Name is a source but cloneType is provided → perform cloning ----
-        console.log(cloneType);
         if (!cloneType) {
             throw new Error("CloneType is required when cloning source model.");
         }
@@ -117,7 +113,6 @@ export default class AllAssets {
             }
             return clone;
         }
-        // 🚨 TypeScript fix: function must return something
         throw new Error(`Model record '${name}' not found after cloning.`);
     }
     getSourceModels(...names) {
@@ -209,7 +204,6 @@ export default class AllAssets {
     }
     fetchTexture(nameOrId, isCloned) {
         const tracker = this.#assetsTracker;
-        // Step 1: Resolve ID → name
         let name = typeof nameOrId === "number"
             ? tracker["assetsKeyToNameMap"].get(nameOrId)
             : nameOrId;
